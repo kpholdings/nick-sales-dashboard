@@ -108,6 +108,7 @@
     .source-row .limited { color:var(--warn); }
     .empty { padding:28px; text-align:center; color:var(--muted); }
     .error { padding:18px; color:#f4aaa6; border:1px solid rgba(240,107,102,.3); background:rgba(240,107,102,.06); border-radius:8px; }
+    .coverage-note { margin-bottom:12px; padding:12px 14px; border:1px solid var(--line); border-radius:8px; background:var(--panel); color:var(--muted); font-size:11px; line-height:1.5; }
     body.locked { display:grid; place-items:center; padding:20px; }
     body.locked .app { display:none; }
     .auth-gate { width:min(430px,100%); padding:28px; border:1px solid var(--line); border-radius:var(--radius); background:var(--panel); box-shadow:0 18px 60px rgba(0,0,0,.35); }
@@ -148,6 +149,7 @@
       <button class="nav-btn" data-view="leads">Leads <span id="leadCount">—</span></button>
       <button class="nav-btn" data-view="accounts">Accounts <span id="accountCount">—</span></button>
       <button class="nav-btn" data-view="projects">Projects <span>04</span></button>
+      <button class="nav-btn" data-view="dealProjects">Quotes / Samples <span id="dealCount">—</span></button>
       <button class="nav-btn" data-view="followups">Follow-ups <span id="followCount">—</span></button>
     </nav>
     <div class="boundary">Read-only encrypted dashboard.<br>Gmail and Calendar remain Nick-only.</div>
@@ -196,7 +198,8 @@
     </section>
 
     <section class="view" id="projects"><h2 class="section-title">Most recent projects and next steps</h2><div class="project-list" id="projectList"></div></section>
-    <section class="view" id="followups"><h2 class="section-title">Recommended follow-up list</h2><div class="toolbar"><input class="input" id="followSearch" placeholder="Search follow-ups…" /><select id="followType"><option value="all">All types</option><option value="order">Orders</option><option value="lead">Leads</option></select></div><div class="followup-list" id="followupList"></div></section>
+    <section class="view" id="dealProjects"><h2 class="section-title">Active quote and sample projects</h2><div class="coverage-note" id="dealCoverage"></div><div class="table-wrap"><table><thead><tr><th>Type</th><th>Account / project</th><th>Stage</th><th>Last activity</th><th>Recommended next step</th><th>Source</th></tr></thead><tbody id="dealRows"></tbody></table></div></section>
+    <section class="view" id="followups"><h2 class="section-title">Recommended follow-up list</h2><div class="toolbar"><input class="input" id="followSearch" placeholder="Search follow-ups…" /><select id="followType"><option value="all">All types</option><option value="order">Orders</option><option value="quote">Quotes / samples</option><option value="lead">Leads</option></select></div><div class="followup-list" id="followupList"></div></section>
   </main>
 </div>
 <script>
@@ -213,7 +216,7 @@ const fmt = v => {
   const date=new Date(raw);
   return isNaN(date)?esc(v):date.toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'});
 };
-const titles={overview:['Morning overview','Verified pipeline, order risk, and recommended next moves.'],leads:['Lead workspace','Search and filter the live campaign batch.'],accounts:['Account operations','Non-billed NetSuite sales orders requiring status awareness.'],projects:['Project portfolio','Verified active workstreams with concrete next steps.'],followups:['Follow-up queue','Recommended actions; completion is saved only in this browser.']};
+const titles={overview:['Morning overview','Verified pipeline, order risk, and recommended next moves.'],leads:['Lead workspace','Search and filter the live campaign batch.'],accounts:['Account operations','Non-billed NetSuite sales orders requiring status awareness.'],projects:['Project portfolio','Verified active workstreams with concrete next steps.'],dealProjects:['Quotes and samples','Verified quote, sample, and converted-order projects from approved sources.'],followups:['Follow-up queue','Recommended actions; completion is saved only in this browser.']};
 
 document.querySelectorAll('.nav-btn').forEach(btn=>btn.addEventListener('click',()=>{
   document.querySelectorAll('.nav-btn,.view').forEach(x=>x.classList.remove('active'));
@@ -239,6 +242,7 @@ function renderLeads(){ const q=$('#leadSearch').value.toLowerCase(), status=$('
 
 function renderOrders(){ $('#orderRows').innerHTML=DATA.orders.map(o=>`<tr><td><strong>${esc(o.customer)}</strong></td><td>${esc(o.order)}</td><td>${esc(o.date)}</td><td><span class="pill ready">${esc(o.status)}</span></td><td>Confirm current fulfillment status and whether a customer update is needed.</td></tr>`).join(''); }
 function renderProjects(){ $('#projectList').innerHTML=DATA.projects.map(p=>`<article class="project"><div><h3>${esc(p.name)}</h3><div class="status">${esc(p.status)}</div><p class="source">Updated ${fmt(p.updated)}</p></div><p>${esc(p.summary)}</p><div><p class="next-step"><strong>Next step</strong><br>${esc(p.next)}</p><p class="source">Source: ${esc(p.source)}</p></div></article>`).join(''); }
+function renderDealProjects(){ const rows=DATA.dealProjects||[]; $('#dealCoverage').textContent=DATA.dealCoverage?.note||'Coverage details unavailable.'; $('#dealRows').innerHTML=rows.length?rows.map(p=>`<tr><td><span class="pill ${p.kind.includes('order')?'sent':'ready'}">${esc(p.kind)}</span></td><td><strong>${esc(p.account)}</strong><small>${esc(p.project)}</small><small>${esc(p.summary)}</small></td><td>${esc(p.stage)}</td><td>${fmt(p.lastActivity)}</td><td>${esc(p.next)}</td><td>${esc(p.source)}</td></tr>`).join(''):`<tr><td colspan="6" class="empty">No active quote or sample projects were verified in the approved sources.</td></tr>`; }
 function saved(){ try{return JSON.parse(localStorage.getItem('nick-dashboard-followups')||'{}')}catch{return{}} }
 function renderFollowups(){ const q=$('#followSearch').value.toLowerCase(), type=$('#followType').value, done=saved(); const rows=DATA.followups.filter(f=>(type==='all'||f.kind===type)&&[f.company,f.contact,f.reason,f.recommended].join(' ').toLowerCase().includes(q));
   $('#followupList').innerHTML=rows.length?rows.map((f,i)=>{const key=btoa(unescape(encodeURIComponent([f.kind,f.company,f.contact,f.due].join('|')))).replace(/=/g,'');return `<article class="followup ${done[key]?'done':''}" data-key="${key}"><input class="check" type="checkbox" ${done[key]?'checked':''} aria-label="Mark complete"><div><strong>${esc(f.company)}</strong><small>${esc(f.contact)} · ${esc(f.reason)}</small></div><div class="rec">${esc(f.recommended)}<small>Source: ${esc(f.source)}</small></div><div class="due">${fmt(f.due)}</div></article>`}).join(''):`<div class="empty">No follow-ups match these filters.</div>`;
@@ -257,9 +261,9 @@ async function decryptPayload(password){
 }
 function initDashboard(data){
   DATA=data;
-  $('#freshness').textContent='Snapshot '+fmt(DATA.generatedAt); $('#leadCount').textContent=DATA.contacts.length; $('#accountCount').textContent=DATA.metrics.assignedAccounts??'—'; $('#followCount').textContent=DATA.followups.length;
+  $('#freshness').textContent='Snapshot '+fmt(DATA.generatedAt); $('#leadCount').textContent=DATA.contacts.length; $('#accountCount').textContent=DATA.metrics.assignedAccounts??'—'; $('#dealCount').textContent=(DATA.dealProjects||[]).length; $('#followCount').textContent=DATA.followups.length;
   [...new Set(DATA.contacts.map(c=>c.state).filter(Boolean))].sort().forEach(s=>$('#leadState').insertAdjacentHTML('beforeend',`<option value="${esc(s)}">${esc(s)}</option>`));
-  renderOverview(); renderLeads(); renderOrders(); renderProjects(); renderFollowups();
+  renderOverview(); renderLeads(); renderOrders(); renderProjects(); renderDealProjects(); renderFollowups();
 }
 ['leadSearch','leadStatus','leadState'].forEach(id=>$('#'+id).addEventListener(id==='leadSearch'?'input':'change',renderLeads));
 ['followSearch','followType'].forEach(id=>$('#'+id).addEventListener(id==='followSearch'?'input':'change',renderFollowups));
