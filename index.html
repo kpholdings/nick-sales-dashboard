@@ -148,7 +148,7 @@
       <button class="nav-btn active" data-view="overview">Overview <span>01</span></button>
       <button class="nav-btn" data-view="leads">Leads <span id="leadCount">—</span></button>
       <button class="nav-btn" data-view="accounts">Accounts <span id="accountCount">—</span></button>
-      <button class="nav-btn" data-view="projects">Projects <span>04</span></button>
+      <button class="nav-btn" data-view="projects">Projects <span id="projectCount">—</span></button>
       <button class="nav-btn" data-view="dealProjects">Quotes / Samples <span id="dealCount">—</span></button>
       <button class="nav-btn" data-view="followups">Follow-ups <span id="followCount">—</span></button>
     </nav>
@@ -261,7 +261,7 @@ async function decryptPayload(password){
 }
 function initDashboard(data){
   DATA=data;
-  $('#freshness').textContent='Snapshot '+fmt(DATA.generatedAt); $('#leadCount').textContent=DATA.contacts.length; $('#accountCount').textContent=DATA.metrics.assignedAccounts??'—'; $('#dealCount').textContent=(DATA.dealProjects||[]).length; $('#followCount').textContent=DATA.followups.length;
+  $('#freshness').textContent='Snapshot '+fmt(DATA.generatedAt); $('#leadCount').textContent=DATA.contacts.length; $('#accountCount').textContent=DATA.metrics.assignedAccounts??'—'; $('#projectCount').textContent=(DATA.projects||[]).length; $('#dealCount').textContent=(DATA.dealProjects||[]).length; $('#followCount').textContent=DATA.followups.length;
   [...new Set(DATA.contacts.map(c=>c.state).filter(Boolean))].sort().forEach(s=>$('#leadState').insertAdjacentHTML('beforeend',`<option value="${esc(s)}">${esc(s)}</option>`));
   renderOverview(); renderLeads(); renderOrders(); renderProjects(); renderDealProjects(); renderFollowups();
 }
