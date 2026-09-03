@@ -1,0 +1,8 @@
+.DS_Store
+.env
+.env.*
+*.csv
+*.xlsx
+*.sqlite*
+data.json
+data-plain*.json
